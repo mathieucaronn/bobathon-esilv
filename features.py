@@ -221,3 +221,190 @@ def make_features(df: pd.DataFrame) -> pd.DataFrame:
         df[col] = df[col].astype("category")
 
     return df
+
+# ── Two-stage stacking regressor ─────────────────────────────────────────────
+
+from sklearn.base import BaseEstimator, RegressorMixin, clone
+from sklearn.model_selection import GroupKFold
+
+
+def _s1_extra_features(
+    s1: np.ndarray,
+    t_first: np.ndarray,
+    patient_id: np.ndarray,
+) -> pd.DataFrame:
+    """
+    Build the 5 stage-1-derived features used by stage 2 (and predict).
+
+    Columns: s1, s1_pmean, s1_lin, s1_quad, s1_residual.
+    All computed per-patient; NaN fallback when not enough points.
+    """
+    df = pd.DataFrame({
+        "patient_id": patient_id,
+        "t_first":    t_first,
+        "s1":         s1,
+    })
+
+    df["s1_pmean"] = df.groupby("patient_id")["s1"].transform("mean")
+
+    lin_vals  = np.full(len(df), np.nan)
+    quad_vals = np.full(len(df), np.nan)
+
+    for pid, grp in df.groupby("patient_id"):
+        idx   = grp.index
+        t     = grp["t_first"].values.astype(float)
+        v     = grp["s1"].values.astype(float)
+
+        lin_c  = _safe_polyfit(t, v, deg=1)
+        quad_c = _safe_polyfit(t, v, deg=2)
+
+        if lin_c  is not None:
+            lin_vals[idx]  = _poly_eval(lin_c,  t)
+        if quad_c is not None:
+            quad_vals[idx] = _poly_eval(quad_c, t)
+
+    df["s1_lin"]      = lin_vals
+    df["s1_quad"]     = quad_vals
+    df["s1_residual"] = df["s1"] - df["s1_quad"]   # NaN when quad is NaN
+
+    return df[["s1", "s1_pmean", "s1_lin", "s1_quad", "s1_residual"]]
+
+
+def _make_hgbr(
+    max_iter: int = 800,
+    learning_rate: float = 0.03,
+    min_samples_leaf: int = 40,
+    l2_regularization: float = 1.0,
+) -> "HistGradientBoostingRegressor":
+    from sklearn.ensemble import HistGradientBoostingRegressor
+    return HistGradientBoostingRegressor(
+        random_state=0,
+        max_iter=max_iter,
+        learning_rate=learning_rate,
+        min_samples_leaf=min_samples_leaf,
+        l2_regularization=l2_regularization,
+    )
+
+
+class TwoStageRegressor(BaseEstimator, RegressorMixin):
+    """
+    Two-stage stacking regressor with per-patient quadratic smoothing.
+
+    Expected input X: make_features(df) output PLUS two helper columns:
+      - 'patient_id' : used only for GroupKFold grouping and per-patient ops.
+      - 't_first'    : already present in make_features output.
+    patient_id is dropped before any HGBR call.
+
+    Parameters
+    ----------
+    s2_min_samples_leaf : int
+        min_samples_leaf for stage-2 HGBR (stage-1 always uses 40).
+    s2_l2_regularization : float
+        l2_regularization for stage-2 HGBR (stage-1 always uses 1.0).
+    n_inner_splits : int
+        Number of GroupKFold folds for OOF stage-1 predictions.
+    smooth_min_visits : int
+        Minimum number of visits in a patient before applying quadratic smoothing.
+    """
+
+    def __init__(
+        self,
+        s2_min_samples_leaf: int = 40,
+        s2_l2_regularization: float = 1.0,
+        n_inner_splits: int = 5,
+        smooth_min_visits: int = 3,
+    ):
+        self.s2_min_samples_leaf   = s2_min_samples_leaf
+        self.s2_l2_regularization  = s2_l2_regularization
+        self.n_inner_splits        = n_inner_splits
+        self.smooth_min_visits     = smooth_min_visits
+
+    # ── internal helpers ─────────────────────────────────────────────────────
+
+    @staticmethod
+    def _feat_cols(X: pd.DataFrame) -> list[str]:
+        """Return the model-feature columns (drop patient_id)."""
+        return [c for c in X.columns if c != "patient_id"]
+
+    # ── fit ──────────────────────────────────────────────────────────────────
+
+    def fit(self, X: pd.DataFrame, y) -> "TwoStageRegressor":
+        X      = pd.DataFrame(X).copy()
+        y      = np.asarray(y, dtype=float)
+        pid    = X["patient_id"].values
+        t_fst  = X["t_first"].values.astype(float)
+        feat   = self._feat_cols(X)
+        X_feat = X[feat]
+
+        # ── Stage 1 ──────────────────────────────────────────────────────────
+        self.stage1_ = _make_hgbr()
+
+        # Out-of-fold predictions via inner GroupKFold
+        oof_s1 = np.full(len(y), np.nan)
+        inner_cv = GroupKFold(n_splits=self.n_inner_splits)
+        for tr_idx, te_idx in inner_cv.split(X_feat, y, groups=pid):
+            m = clone(self.stage1_)
+            m.fit(X_feat.iloc[tr_idx], y[tr_idx])
+            oof_s1[te_idx] = m.predict(X_feat.iloc[te_idx])
+
+        # ── Stage-1-derived features ─────────────────────────────────────────
+        s1_feats = _s1_extra_features(oof_s1, t_fst, pid)
+
+        # ── Stage 2 ──────────────────────────────────────────────────────────
+        X_s2 = pd.concat(
+            [X_feat.reset_index(drop=True), s1_feats.reset_index(drop=True)],
+            axis=1,
+        )
+        self.stage2_ = _make_hgbr(
+            min_samples_leaf=self.s2_min_samples_leaf,
+            l2_regularization=self.s2_l2_regularization,
+        )
+        self.stage2_.fit(X_s2, y)
+
+        # ── Refit stage 1 on all training rows ───────────────────────────────
+        self.stage1_.fit(X_feat, y)
+
+        # Store feature column order for predict-time alignment
+        self.feat_cols_   = feat
+        self.s2_cols_     = X_s2.columns.tolist()
+
+        return self
+
+    # ── predict ──────────────────────────────────────────────────────────────
+
+    def predict(self, X: pd.DataFrame) -> np.ndarray:
+        X      = pd.DataFrame(X).copy()
+        pid    = X["patient_id"].values
+        t_fst  = X["t_first"].values.astype(float)
+        X_feat = X[self.feat_cols_]
+
+        # Stage-1 predictions
+        s1_pred  = self.stage1_.predict(X_feat)
+
+        # Stage-1-derived features
+        s1_feats = _s1_extra_features(s1_pred, t_fst, pid)
+        X_s2     = pd.concat(
+            [X_feat.reset_index(drop=True), s1_feats.reset_index(drop=True)],
+            axis=1,
+        )[self.s2_cols_]
+
+        raw_pred = self.stage2_.predict(X_s2)
+
+        # ── Per-patient quadratic smoothing ───────────────────────────────────
+        smoothed = raw_pred.copy()
+        df_sm    = pd.DataFrame({
+            "patient_id": pid,
+            "t_first":    t_fst,
+            "raw":        raw_pred,
+        })
+        for p_id, grp in df_sm.groupby("patient_id"):
+            if len(grp) < self.smooth_min_visits:
+                continue
+            idx  = grp.index
+            t    = grp["t_first"].values.astype(float)
+            v    = grp["raw"].values.astype(float)
+            coef = _safe_polyfit(t, v, deg=2)
+            if coef is not None:
+                smoothed[idx] = _poly_eval(coef, t)
+
+        return np.clip(smoothed, 0.0, 132.0)

@@ -4,8 +4,8 @@
 
 - **Project / dataset:** Parkinson's disease (PD) multi-cohort visits — predict true OFF MDS-UPDRS motor score
 - **Goal:** Minimize RMSE for the true OFF MDS-UPDRS motor score, on patients held out from training
-- **Last experiment:** 08_patient_feats_gcv — done
-- **Last result:** Patient-trajectory features + tuned HGBR, grouped CV RMSE 3.749 ± 0.028 (+49.5 % vs step 5)
+- **Last experiment:** 09_stack — done
+- **Last result:** TwoStageRegressor Kaggle submission; row-holdout RMSE 3.295; CSV: submissions/09_stack.csv
 
 - **Workspace decisions** (immutable unless the user pivots):
   - tabular library: pandas - recorded: 2025-07-14
@@ -40,6 +40,8 @@
 | `07_tabular` | tabular_pipeline final fit on all training data; row holdout report + Kaggle submission | done | Test RMSE 7.295, train 6.861 (gap +0.434) · hub: [07_tabular](https://skore.probabl.ai/M&C/bobathon-esilv/estimators/84189) · CSV: submissions/07_tabular.csv | n/a |
 | `08_patient_feats_gcv` | Patient-trajectory features (lag, polyfit, traj, on_corr) + tuned HGBR, GroupKFold(5) | done | RMSE 3.740 ± 0.030 after NaN-fallback fix (+49.7 % vs step 5); train gap +1.282; top feat: traj · hub: [08_patient_feats_gcv](https://skore.probabl.ai/M&C/bobathon-esilv/cross-validations/85885) | n/a |
 | `08_patient_feats` | Same model, EstimatorReport (splitter=0.2) + Kaggle submission | done | Test RMSE 3.017, train 2.536 (gap +0.480) · hub: [08_patient_feats](https://skore.probabl.ai/M&C/bobathon-esilv/estimators/86353) · CSV: submissions/08_patient_feats.csv | n/a |
+| `09_stack_gcv` | Two-stage stacking (OOF s1 feats) + quadratic smoothing, GroupKFold(5), variant a (leaf=40, l2=1.0) | done | RMSE 3.430 ± 0.019 (+8.3 % vs 08); smoothing gain +0.040; train gap +1.565 · hub: [09_stack_gcv](https://skore.probabl.ai/M&C/bobathon-esilv/cross-validations/87511) | n/a |
+| `09_stack` | Same model, EstimatorReport (splitter=0.2) + Kaggle submission | done | Test RMSE 3.295, train 1.887 (gap +1.407) · hub: [09_stack](https://skore.probabl.ai/M&C/bobathon-esilv/estimators/87707) · CSV: submissions/09_stack.csv | n/a |
 
 ## Backlog
 
@@ -49,5 +51,6 @@
 | ~~B2~~ | ~~HistGradientBoostingRegressor — keep NaN as signal, no imputation~~ | resolved in 04_hgbr_gcv |
 | ~~B3~~ | ~~tabular_pipeline (skrub) — include gene/cohort categoricals~~ | resolved in 05_tabular_gcv |
 | ~~B4~~ | ~~Produce Kaggle submission from 08_patient_feats_gcv (refit on all training data)~~ | resolved in 08_patient_feats |
-| B5 | Reduce overfitting gap (+1.282): try max_iter tuning or early stopping | my-pick:08_patient_feats_gcv |
-| B6 | Lag feature: previous visit's target (would require careful leak-free construction) | user |
+| ~~B5~~ | ~~Reduce overfitting gap: more regularised stage-2~~ | tested in 09_stack_gcv variant b; variant a still best |
+| ~~B6~~ | ~~Kaggle submission for 09_stack_gcv (refit on all training data)~~ | resolved in 09_stack |
+| B7 | Reduce train/test gap (+1.565): try early stopping or shallower trees | my-pick:09_stack_gcv |
