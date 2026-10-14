@@ -76,7 +76,7 @@ print(f"Shape : {submission.shape}  — colonnes : {list(submission.columns)}")
 # Q5. ledd manque plus dans la cohorte B (43 %) que dans la A (36 %) : ce n'est pas
 #     au hasard, ça dépend du protocole de chaque cohorte.
 # Q6. On ne donne pas Index ni patient_id (identifiants : le modèle les mémoriserait)
-#     ni target (c'est la réponse). rater_id est à utiliser avec prudence.
+#     ni target (c'est la réponse).
 
 # ── Réponses workbook — Day 1, section 3 (dummy) ────────────────────────────
 # Q1. RMSE dummy = 16,48, presque égal à l'écart-type de target (16,50).
