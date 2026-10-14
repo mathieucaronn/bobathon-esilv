@@ -105,3 +105,9 @@ print(f"Submission written: {out_path}  shape={submission.shape}")
 print()
 print(f"Hub key to paste in Kaggle Submission Description: {best_key}")
 print("(URL was printed by skore above when that report was pushed)")
+
+# ── Réponses workbook — Day 2, section 2 (réglage d'alpha) ──────────────────
+# Q1. Le RMSE ne bouge pas : 10,39 pour alpha de 0,1 à 1000. Avec 8 variables et
+#     44 000 lignes, le modèle a assez de données et la régularisation a peu d'effet.
+# Q2. Les coefficients changent très peu : time_since_intake_on passe de 1,75 à 1,70
+#     entre alpha=0,1 et alpha=1000, les autres bougent encore moins.

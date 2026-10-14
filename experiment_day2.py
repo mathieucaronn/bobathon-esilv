@@ -92,3 +92,13 @@ submission["target"] = final.predict(X_test[feature_cols])
 Path("submissions").mkdir(exist_ok=True)
 submission.to_csv("submissions/02_ridge.csv", index=False)
 print(f"Submission written: submissions/02_ridge.csv  shape={submission.shape}")
+
+# ── Réponses workbook — Day 2, section 1 (Ridge vs dummy) ───────────────────
+# Q1. RMSE 10,39 contre 16,48 : Ridge réduit l'erreur de 37 %. C'est un gros gain,
+#     mais il est mesuré sur un découpage aléatoire, donc un peu optimiste.
+# Q2. Le plus gros coefficient en valeur absolue est time_since_intake_on (1,75),
+#     puis age (1,07) et age_at_diagnosis (-0,96). off (0,62) et on (0,52) sont
+#     positifs, comme attendu : un score mesuré élevé donne un vrai OFF élevé.
+# Q3. Les variables ne sont pas à la même échelle : ledd varie de centaines de mg
+#     (écart-type 219), age de quelques années. Un coefficient dépend de l'unité,
+#     donc sa taille brute ne dit pas l'importance de la variable.

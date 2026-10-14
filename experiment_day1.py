@@ -62,3 +62,26 @@ Path("submissions").mkdir(exist_ok=True)
 submission.to_csv("submissions/01_dummy.csv", index=False)
 print("Fichier généré : submissions/01_dummy.csv")
 print(f"Shape : {submission.shape}  — colonnes : {list(submission.columns)}")
+
+# ── Réponses workbook — Day 1, section 2 (EDA) ──────────────────────────────
+# Q1. Train : 44 590 visites, 5 576 patients. Test : 11 013 visites, 1 395 patients.
+#     Environ 7 visites par patient en médiane, 12 au maximum.
+# Q2. Colonnes les plus vides : time_since_intake_off (79 %), time_since_intake_on (46 %),
+#     off (42 %). 30 % des visites n'ont pas de score on. Aucune visite n'a ni on ni off.
+# Q3. target va de 0 à 109,5 (moyenne 37,5, écart-type 16,5). Jamais près de 132.
+#     Distribution presque symétrique (skewness ≈ 0,05).
+# Q4. off est le plus corrélé à target (0,89), puis on (0,69) et la durée de la maladie
+#     age - age_at_diagnosis (0,54). off n'est pas une copie : il s'écarte de target
+#     d'environ 10 points (RMSE). Les délais de prise sont peu corrélés seuls (≈ 0).
+# Q5. ledd manque plus dans la cohorte B (43 %) que dans la A (36 %) : ce n'est pas
+#     au hasard, ça dépend du protocole de chaque cohorte.
+# Q6. On ne donne pas Index ni patient_id (identifiants : le modèle les mémoriserait)
+#     ni target (c'est la réponse). rater_id est à utiliser avec prudence.
+
+# ── Réponses workbook — Day 1, section 3 (dummy) ────────────────────────────
+# Q1. RMSE dummy = 16,48, presque égal à l'écart-type de target (16,50).
+#     Normal : prédire toujours la moyenne donne une erreur égale à l'écart-type.
+# Q2. Le graphe prédit vs réel est une ligne horizontale : même prédiction pour tous.
+#     Un modèle parfait aurait tous ses points sur la diagonale y = x.
+# Q3. Score à battre : 16,48. Un gain n'est réel que s'il dépasse la variation entre
+#     folds (≈ 0,3 pour le dummy en GroupKFold) : en dessous, c'est du bruit.
