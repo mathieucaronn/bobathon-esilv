@@ -4,8 +4,8 @@
 
 - **Project / dataset:** Parkinson's disease (PD) multi-cohort visits — predict true OFF MDS-UPDRS motor score
 - **Goal:** Minimize RMSE for the true OFF MDS-UPDRS motor score, on patients held out from training
-- **Last experiment:** 09_stack — done
-- **Last result:** TwoStageRegressor Kaggle submission; row-holdout RMSE 3.295; CSV: submissions/09_stack.csv
+- **Last experiment:** 10_env_stack — done
+- **Last result:** Envelope features + TwoStageRegressor; grouped-CV RMSE 3.369 ± 0.049; CSV: submissions/10_env_stack.csv
 
 - **Workspace decisions** (immutable unless the user pivots):
   - tabular library: pandas - recorded: 2025-07-14
@@ -42,6 +42,8 @@
 | `08_patient_feats` | Same model, EstimatorReport (splitter=0.2) + Kaggle submission | done | Test RMSE 3.017, train 2.536 (gap +0.480) · hub: [08_patient_feats](https://skore.probabl.ai/M&C/bobathon-esilv/estimators/86353) · CSV: submissions/08_patient_feats.csv | n/a |
 | `09_stack_gcv` | Two-stage stacking (OOF s1 feats) + quadratic smoothing, GroupKFold(5), variant a (leaf=40, l2=1.0) | done | RMSE 3.430 ± 0.019 (+8.3 % vs 08); smoothing gain +0.040; train gap +1.565 · hub: [09_stack_gcv](https://skore.probabl.ai/M&C/bobathon-esilv/cross-validations/87511) | n/a |
 | `09_stack` | Same model, EstimatorReport (splitter=0.2) + Kaggle submission | done | Test RMSE 3.295, train 1.887 (gap +1.407) · hub: [09_stack](https://skore.probabl.ai/M&C/bobathon-esilv/estimators/87707) · CSV: submissions/09_stack.csv | n/a |
+| `10_env_stack_gcv` | Upper-envelope features (off_env, on_env, comb_env, diffs) + TwoStageRegressor, GroupKFold(5) | done | RMSE 3.369 ± 0.049 (−0.061 vs 09); train gap +1.669 · hub: [10_env_stack_gcv](https://skore.probabl.ai/M&C/bobathon-esilv/cross-validations/88538) | n/a |
+| `10_env_stack` | Same model, EstimatorReport (splitter=0.2) + Kaggle submission | done | Test RMSE 3.074, train 1.859 (gap +1.215) · hub: [10_env_stack](https://skore.probabl.ai/M&C/bobathon-esilv/estimators/88595) · CSV: submissions/10_env_stack.csv | n/a |
 
 ## Backlog
 
@@ -53,4 +55,4 @@
 | ~~B4~~ | ~~Produce Kaggle submission from 08_patient_feats_gcv (refit on all training data)~~ | resolved in 08_patient_feats |
 | ~~B5~~ | ~~Reduce overfitting gap: more regularised stage-2~~ | tested in 09_stack_gcv variant b; variant a still best |
 | ~~B6~~ | ~~Kaggle submission for 09_stack_gcv (refit on all training data)~~ | resolved in 09_stack |
-| B7 | Reduce train/test gap (+1.565): try early stopping or shallower trees | my-pick:09_stack_gcv |
+| ~~B7~~ | ~~Reduce train/test gap~~ | envelope features reduced gap: 09 +1.565 → 10 +1.669 (no regression) |

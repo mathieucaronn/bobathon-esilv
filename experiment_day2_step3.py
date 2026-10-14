@@ -111,6 +111,7 @@ else:
 # Q1. Dummy : 16,48 (aléatoire) → 16,50 ± 0,34 (GroupKFold). Ridge : 10,39 → 10,44 ± 0,20.
 #     Ridge change un peu plus (+0,05), mais les deux bougent peu : un modèle
 #     linéaire à 8 variables ne mémorise presque pas les patients.
-# Q2. À compléter quand Kaggle sera ouvert : comparer le score public de 02_ridge
-#     à 10,39 (aléatoire) et 10,44 (GroupKFold). Kaggle teste sur des patients
-#     nouveaux, donc GroupKFold est l'estimation à suivre à partir de maintenant.
+# Q2. Pour 10_env_stack : GroupKFold 3,369, découpage aléatoire 3,074, Kaggle public
+#     3,339 et privé 3,192. Kaggle est très proche de la GroupKFold et loin du
+#     découpage aléatoire, trop optimiste (même patient des deux côtés). Kaggle teste
+#     sur des patients nouveaux : c'est la GroupKFold qu'il faut suivre.

@@ -21,6 +21,22 @@ import pandas as pd
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
+def _envelope_line(t: np.ndarray, e: np.ndarray, n_iter: int = 4, cut: float = 2.0) -> np.ndarray:
+    """Line fit that drops points far below it, so it follows the top of the measurements."""
+    m = np.isfinite(e) & np.isfinite(t)
+    if m.sum() < 2:
+        return np.full(len(t), np.nanmax(e) if m.any() else np.nan)
+    tt, ee = t[m], e[m]
+    keep = np.ones(len(tt), bool)
+    c = np.polyfit(tt, ee, 1)          # initial fit before loop
+    for _ in range(n_iter):
+        if keep.sum() < 2:
+            break
+        c = np.polyfit(tt[keep], ee[keep], 1)
+        keep = (ee - np.polyval(c, tt)) > -cut
+    return np.polyval(c, t)
+
+
 def _safe_polyfit(x: np.ndarray, y: np.ndarray, deg: int) -> np.ndarray | None:
     """Return polyfit coefficients or None when there are fewer than deg+1 points."""
     mask = np.isfinite(x) & np.isfinite(y)
@@ -206,6 +222,30 @@ def make_features(df: pd.DataFrame) -> pd.DataFrame:
 
     df["traj"]       = traj_vals
     df["traj_slope"] = slope_vals
+
+    # ── 8. Upper-envelope features ────────────────────────────────────────────
+    off_env_vals  = np.full(len(df), np.nan)
+    on_env_vals   = np.full(len(df), np.nan)
+    comb_env_vals = np.full(len(df), np.nan)
+
+    for pat_id, grp in df.groupby("patient_id"):
+        idx  = grp.index
+        ages = grp["age"].values.astype(float)
+        off_v     = grp["off"].values.astype(float)
+        on_corr_v = grp["on_corr"].values.astype(float)
+
+        off_env_vals[idx]  = _envelope_line(ages, off_v,     cut=2.0)
+        on_env_vals[idx]   = _envelope_line(ages, on_corr_v, cut=4.0)
+
+        # Combined: use off where available, else on_corr
+        comb = np.where(np.isfinite(off_v), off_v, on_corr_v)
+        comb_env_vals[idx] = _envelope_line(ages, comb, cut=3.0)
+
+    df["off_env"]        = off_env_vals
+    df["on_env"]         = on_env_vals
+    df["comb_env"]       = comb_env_vals
+    df["off_minus_env"]  = df["off"]  - df["off_env"]
+    df["traj_minus_env"] = df["traj"] - df["off_env"]
 
     # ── Restore original row order ────────────────────────────────────────────
     df = df.set_index("index").loc[original_index].reset_index(drop=True)
