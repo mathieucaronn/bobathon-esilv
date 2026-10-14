@@ -1,3 +1,48 @@
+# Notre rendu — équipe M&C
+
+**Notre code, ce sont les notebooks du dossier [`notebooks_finaux/`](notebooks_finaux/).** Ils sont déjà exécutés : les résultats s'affichent sans rien relancer. Chaque section explique ce que l'on fait, puis montre le code et le résultat ; les réponses aux questions du workbook sont à la fin de chaque notebook.
+
+| Ordre | Notebook | Contenu | Meilleur RMSE |
+|---|---|---|---|
+| 1 | [`01_day1.ipynb`](notebooks_finaux/01_day1.ipynb) | Exploration des données (EDA) et modèle dummy | 16,48 |
+| 2 | [`02_day2.ipynb`](notebooks_finaux/02_day2.ipynb) | Étapes 1 à 7 du Day 2 : Ridge, validation par patient, HistGradientBoosting, skrub, soumission | 7,43 |
+| 3 | [`03_ameliorations.ipynb`](notebooks_finaux/03_ameliorations.ipynb) | Après le guide : trajectoire de chaque patient, empilement, enveloppe supérieure | **3,37** |
+
+## Résultat
+
+| Modèle | RMSE validation par patient (GroupKFold) | Kaggle public | Kaggle privé |
+|---|---|---|---|
+| `07_tabular` (fin du guide) | 7,43 | | |
+| **`10_env_stack` (notre soumission finale)** | **3,37** | **3,339** | **3,192** |
+
+Rapport Skore Hub du modèle final : https://skore.probabl.ai/M&C/bobathon-esilv/estimators/88595 (workspace `M&C`, projet `bobathon-esilv`).
+
+## Ce que nous avons fait
+
+1. **Suivi du guide (Day 1 et Day 2)** : dummy (16,5) → Ridge (10,4) → HistGradientBoosting qui garde les valeurs manquantes (7,4) → skrub `tabular_pipeline` et DataOps.
+2. **Validation honnête** : `GroupKFold` sur `patient_id`, car Kaggle teste sur des patients nouveaux. Elle prédit le score Kaggle à 0,03 près, alors que le découpage aléatoire est trop optimiste.
+3. **L'idée clé** : pour un patient, le vrai score OFF suit presque parfaitement une courbe lisse de l'âge (erreur de 0,33). Nous reconstruisons cette trajectoire à partir des mesures `on`/`off` de **toutes ses visites**, en corrigeant leurs biais (`off` sous-estime le vrai score, `on` dépend du délai depuis la prise du médicament).
+4. **Le modèle final** : variables par patient + empilement en deux étages (prédictions de l'étage 1 hors échantillon) + lissage de la trajectoire de chaque patient.
+5. **Pas de fuite** : aucune variable n'utilise `target`, et `patient_id` / `Index` ne sont jamais des variables du modèle.
+
+## Organisation du dossier
+
+| Élément | Rôle |
+|---|---|
+| [`notebooks_finaux/`](notebooks_finaux/) | **Notre code, à lire en premier** |
+| [`features.py`](features.py) | Construction des variables par patient et modèle `TwoStageRegressor` (importé par le notebook 3) |
+| [`cv_splits.py`](cv_splits.py) | Chargement des données et découpage GroupKFold commun à tous les modèles |
+| [`submissions/`](submissions/) | Fichiers envoyés sur Kaggle (`10_env_stack.csv` = soumission finale) |
+| [`journal/JOURNAL.md`](journal/JOURNAL.md) | Journal des expériences tenu par IBM Bob (scores et liens Skore Hub) |
+| [`archives_py/`](archives_py/) | Scripts `.py` d'origine, remplacés par les notebooks (sauvegarde) |
+| `docs/`, `tests/`, `scripts/` | Consignes et outils fournis par le lab |
+
+**Pour réexécuter les notebooks** : installer l'environnement comme dans [docs/SETUP.md](docs/SETUP.md), placer les CSV de Kaggle dans `data/`, puis exécuter les notebooks dans l'ordre. Les envois vers Skore Hub sont désactivés (`PUSH = False`) car les rapports y sont déjà.
+
+---
+
+# Consignes du lab (README d'origine)
+
 <p align="center">
   <img src="docs/figures/probabl-logo.svg" alt="Probabl" height="100">
   &nbsp;&nbsp;&nbsp;&nbsp;
