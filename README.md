@@ -29,9 +29,9 @@ Rapport Skore Hub du modèle final : https://skore.probabl.ai/M&C/bobathon-esilv
 
 | Élément | Rôle |
 |---|---|
-| [`notebooks_finaux/`](notebooks_finaux/) | **Notre code, à lire en premier** |
-| [`features.py`](features.py) | Construction des variables par patient et modèle `TwoStageRegressor` (importé par le notebook 3) |
-| [`cv_splits.py`](cv_splits.py) | Chargement des données et découpage GroupKFold commun à tous les modèles |
+| [`notebooks_finaux/`](notebooks_finaux/) | **Notre code, à lire en premier** : les 3 notebooks et les 2 modules qu'ils importent |
+| [`notebooks_finaux/features.py`](notebooks_finaux/features.py) | Construction des variables par patient et modèle `TwoStageRegressor` (importé par le notebook 3) |
+| [`notebooks_finaux/cv_splits.py`](notebooks_finaux/cv_splits.py) | Chargement des données et découpage GroupKFold commun à tous les modèles |
 | [`submissions/`](submissions/) | Fichiers envoyés sur Kaggle (`10_env_stack.csv` = soumission finale) |
 | [`journal/JOURNAL.md`](journal/JOURNAL.md) | Journal des expériences tenu par IBM Bob (scores et liens Skore Hub) |
 | [`archives_py/`](archives_py/) | Scripts `.py` d'origine, remplacés par les notebooks (sauvegarde) |
